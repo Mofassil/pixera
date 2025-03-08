@@ -9,10 +9,10 @@ interface MongooseConnection {
 
 // Explicitly type the global object to avoid the `any` type
 declare global {
-  let mongoose: MongooseConnection | undefined;
+  let Mongoose: MongooseConnection | undefined;
 }
 
-const cached: MongooseConnection = global.mongoose || { conn: null, promise: null };
+const cached: MongooseConnection = globalThis.mongoose || { conn: null, promise: null };
 
 export const connectToDatabase = async (): Promise<Mongoose> => {
   // If there's already a connection, return it
