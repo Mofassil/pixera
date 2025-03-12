@@ -1,31 +1,49 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose, { Connection, ConnectOptions } from 'mongoose';
 
 const MONGODB_URL = process.env.MONGODB_URL;
 
 interface MongooseConnection {
-  conn: Mongoose | null;
-  promise: Promise<Mongoose> | null;
+  conn: Connection | null;
+  promise: Promise<Connection> | null;
 }
 
-// Explicitly type the global object to avoid the `any` type
+// Modern TypeScript global declaration
 declare global {
-  let Mongoose: MongooseConnection | undefined;
+  // eslint-disable-next-line no-var
+  var mongooseConnection: MongooseConnection | undefined;
 }
 
-const cached: MongooseConnection = globalThis.mongoose || { conn: null, promise: null };
+// Use a const assertion pattern to avoid global if possible
+const cached: MongooseConnection = (
+  global.mongooseConnection ?? {
+    conn: null,
+    promise: null
+  }
+);
 
-export const connectToDatabase = async (): Promise<Mongoose> => {
-  // If there's already a connection, return it
+// Update global reference if not already set
+if (!global.mongooseConnection) {
+  global.mongooseConnection = cached;
+}
+
+export const connectToDatabase = async (): Promise<Connection> => {
   if (cached.conn) return cached.conn;
 
-  // If the MongoDB URL is missing, throw an error
-  if (!MONGODB_URL) throw new Error("Missing MONGODB_URL");
+  if (!MONGODB_URL) throw new Error('Missing MONGODB_URL');
 
-  // Initialize the promise to connect if it doesn't exist yet
-  cached.promise = cached.promise || mongoose.connect(MONGODB_URL, { dbName: "pixera", bufferCommands: false });
+  const options: ConnectOptions = {
+    dbName: 'pixera',
+    bufferCommands: false
+  };
 
-  // Wait for the connection to resolve and store it in the cache
+  cached.promise = 
+    cached.promise || 
+    mongoose.connect(MONGODB_URL, options)
+      .then((mongoose) => mongoose.connection);
+
   cached.conn = await cached.promise;
-
+  
   return cached.conn;
-};
+}
+
+
